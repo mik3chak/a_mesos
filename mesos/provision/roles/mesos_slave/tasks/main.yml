@@ -1,0 +1,12 @@
+---
+- name: Install Mesos package
+  apt:
+    pkg="mesos"
+    state=present
+    update_cache=yes
+
+- name: Disable zookeeper service
+  service:
+    name=zookeeper
+    enabled=no
+    state=stopped

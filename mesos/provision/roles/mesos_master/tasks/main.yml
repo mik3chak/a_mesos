@@ -1,0 +1,6 @@
+---
+- name: Install Mesosphere package
+  apt:
+    pkg="mesosphere"
+    state=present
+    update_cache=yes

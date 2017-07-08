@@ -1,0 +1,24 @@
+---
+- name: Start mesos-master
+  shell: start mesos-master
+
+- name: Stop mesos-master
+  shell: stop mesos-master
+
+- name: Start mesos-slave
+  shell: start mesos-slave
+
+- name: Stop mesos-slave
+  shell: stop mesos-slave
+
+- name: Start marathon
+  shell: start marathon
+
+- name: Stop marathon
+  shell: stop marathon
+
+- name: Restart zookeeper
+  shell: restart zookeeper
+
+- name: Stop zookeeper
+  shell: stop zookeeper

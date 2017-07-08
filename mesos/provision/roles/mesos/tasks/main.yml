@@ -1,0 +1,187 @@
+---
+#- name: My way
+#  shell: sudo apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
+
+# - name: Check if mesos is installed
+#   command: dpkg-query -l mesos
+#   register: mesos_check
+#   failed_when: mesos_check.rc > 1
+#   #changed_when: no
+#
+# - name: Install APT Key for Mesosphere repository
+#   shell: sudo apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF
+#   when: mesos_check.stdout.find('no packages found') != 1
+#
+# - name: Install APT Key for Mesosphere repository part 2
+#   shell: echo 'deb http://repos.mesosphere.io/ubuntu trusty main' | sudo tee /etc/apt/sources.list.d/mesosphere.list
+#   when: mesos_check.stdout.find('no packages found') != 1
+#
+# - name: Update repositories cache
+#   apt:
+#     update_cache: yes
+
+
+
+# - name: Install APT Key for Mesosphere repository part 2
+#   shell: DISTRO=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
+#   when: mesos_check.stdout.find('no packages found') != 1
+#
+# - name: Install APT Key for Mesosphere repository part 3
+#   shell: CODENAME=$(lsb_release -cs)
+#   when: mesos_check.stdout.find('no packages found') != 1
+#
+# - name: Install APT Key for Mesosphere repository part 4
+#   shell: echo "deb http://repos.mesosphere.io/${DISTRO} ${CODENAME} main" | sudo tee /etc/apt/sources.list.d/mesosphere.list
+#   when: mesos_check.stdout.find('no packages found') != 1
+
+# vagrant@master1:~$ cat /etc/apt/sources.list.d/mesosphere.list
+# deb http://repos.mesosphere.io/ubuntu trusty main
+
+- name: Install APT Key for Mesosphere repository
+  apt_key:
+    keyserver: hkp://keyserver.ubuntu.com:80
+    id: E56151BF
+    state: present
+
+- name: Install APT Mesosphere repository
+  apt_repository:
+    repo: "deb http://repos.mesosphere.io/{{ ansible_distribution|lower }} {{ ansible_lsb.codename }} main"
+    state: present
+
+- name: Install Mesosphere package
+  apt:
+    pkg="{{item}}"
+    state=present
+    update_cache=yes
+  with_items:
+    - mesosphere
+  when: mesos_install_mode == "master"
+
+- name: Install Mesos package
+  apt:
+    pkg="{{item}}"
+    state=present
+    update_cache=yes
+  with_items:
+    - mesos
+  when: mesos_install_mode == "slave"
+
+- name: Stop mesos slave in masters
+  service:
+    name: mesos-slave
+    state: stopped
+
+- name: Stop mesos master and zk in slaves
+  service:
+    name: "{{item}}"
+    state: stopped
+  with_items:
+    - mesos-master
+    - zookeeper
+
+- name: Disable Mesos slave service in masters
+  copy:
+    content: "manual"
+    dest: /etc/init/mesos-slave.override
+    mode: 0644
+  when: mesos_install_mode == "master"
+
+- name: Disable Mesos master service in slaves
+  copy:
+    content: "manual"
+    dest: /etc/init/mesos-master.override
+    mode: 0644
+  when: mesos_install_mode == "slave"
+
+- name: Disable Zk in slave (if any)
+  copy:
+    content: "manual"
+    dest: /etc/init/zookeeper.override
+    mode: 0644
+  when: mesos_install_mode == "slave"
+
+- name: Set Mesos Master quorum
+  copy:
+    content: "{{mesos_quorum_count}}"
+    dest: /etc/mesos-master/quorum
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos cluster name
+  copy:
+    content: "{{mesos_cluster_name}}"
+    dest: /etc/mesos-master/cluster
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos master ip
+  copy:
+    content: "{{mesos_local_address}}"
+    dest: /etc/mesos-master/ip
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos master hostname
+  copy:
+    content: "{{mesos_local_address}}"
+    dest: /etc/mesos-master/hostname
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos slave ip
+  copy:
+    content: "{{mesos_local_address}}"
+    dest: /etc/mesos-slave/ip
+  when: mesos_install_mode == "slave"
+
+- name: Set Mesos slave hostname
+  copy:
+    content: "{{mesos_local_address}}"
+    dest: /etc/mesos-slave/hostname
+  when: mesos_install_mode == "slave"
+
+- name: Create Marathon directory
+  file:
+    path: /etc/marathon/conf
+    state: directory
+    owner: vagrant
+    group: vagrant
+    mode: 0775
+
+- name: Set Marathon hostname
+  copy:
+    src: /etc/mesos-master/hostname
+    dest: /etc/marathon/conf
+
+- name: Set Marathon zk
+  copy:
+    src: /etc/mesos/zk
+    dest: /etc/marathon/conf/master
+
+- name: Set Marathon zk conf
+  copy:
+    src: /etc/marathon/conf/master
+    dest: /etc/marathon/conf/zk
+
+- name: Set Marathon zk conf to marathon
+  shell: sed -i 's/mesos/marathon/g' /etc/marathon/conf/zk
+
+- name: Setup Zookeeper
+  copy:
+    content: "{{zookeeper_mesos_url}}"
+    dest: /etc/mesos/zk
+    mode: 0644
+  when: mesos_install_mode == "master" or mesos_install_mode == "slave"
+
+- name: Setup Zookeeper id
+  template:
+    src=zoo_id.j2
+    dest=/etc/zookeeper/conf/myid
+  when: mesos_install_mode == "master"
+
+- name: Setup Zookeeper conf
+  template:
+    src=zoo.cfg.j2
+    dest=/etc/zookeeper/conf/zoo.cfg
+  notify:
+    - Restart zookeeper
+    - Start mesos-master
+    - Start marathon
+    - Start mesos-slave
+  when: mesos_install_mode == "master"
