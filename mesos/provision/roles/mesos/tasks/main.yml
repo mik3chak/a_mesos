@@ -112,27 +112,37 @@
     dest: /etc/mesos-master/cluster
   when: mesos_install_mode == "master"
 
+- name: Get hostname
+  command: hostname
+  register: hostname
+
+- debug: msg=hostname.stdout
+
 - name: Set Mesos master ip
   copy:
-    content: "{{mesos_local_address}}"
+    #content: "{{mesos_local_address}}"
+    content: "{{hostvars[hostname.stdout].static_ip}}"
     dest: /etc/mesos-master/ip
   when: mesos_install_mode == "master"
 
 - name: Set Mesos master hostname
   copy:
-    content: "{{mesos_local_address}}"
+    #content: "{{mesos_local_address}}"
+    content: "{{hostvars[hostname.stdout].static_ip}}"
     dest: /etc/mesos-master/hostname
   when: mesos_install_mode == "master"
 
 - name: Set Mesos slave ip
   copy:
-    content: "{{mesos_local_address}}"
+    #content: "{{mesos_local_address}}"
+    content: "{{hostvars[hostname.stdout].static_ip}}"
     dest: /etc/mesos-slave/ip
   when: mesos_install_mode == "slave"
 
 - name: Set Mesos slave hostname
   copy:
-    content: "{{mesos_local_address}}"
+    #content: "{{mesos_local_address}}"
+    content: "{{hostvars[hostname.stdout].static_ip}}"
     dest: /etc/mesos-slave/hostname
   when: mesos_install_mode == "slave"
 
@@ -146,27 +156,37 @@
 
 - name: Set Marathon hostname
   copy:
+    remote_src: true
     src: /etc/mesos-master/hostname
     dest: /etc/marathon/conf
+  when: mesos_install_mode == "master"
 
 - name: Set Marathon zk
   copy:
+    remote_src: true
     src: /etc/mesos/zk
     dest: /etc/marathon/conf/master
+  when: mesos_install_mode == "master"
+
+- name: Set Marathon zk conf to marathon
+  shell: sed -i 's/mesos/marathon/g' /etc/marathon/conf/master
+  when: mesos_install_mode == "master"
 
 - name: Set Marathon zk conf
   copy:
+    remote_src: true
     src: /etc/marathon/conf/master
     dest: /etc/marathon/conf/zk
-
-- name: Set Marathon zk conf to marathon
-  shell: sed -i 's/mesos/marathon/g' /etc/marathon/conf/zk
+  when: mesos_install_mode == "master"
 
 - name: Setup Zookeeper
   copy:
-    content: "{{zookeeper_mesos_url}}"
+    content: "{{zookeeper_mesos_url2}}"
     dest: /etc/mesos/zk
     mode: 0644
+  # template:
+  #   src=mesos_zk.j2
+  #   dest=/etc/mesos/zk
   when: mesos_install_mode == "master" or mesos_install_mode == "slave"
 
 - name: Setup Zookeeper id
@@ -181,7 +201,21 @@
     dest=/etc/zookeeper/conf/zoo.cfg
   notify:
     - Restart zookeeper
-    - Start mesos-master
+    - Restart mesos-master
     - Start marathon
-    - Start mesos-slave
   when: mesos_install_mode == "master"
+
+- name: Restart mesos-slave
+  service:
+    name: mesos-slave
+    state: restarted
+
+# - name: Restart mesos slaves
+#   notify:
+#     - Restart mesos-slave
+
+# - name: data container
+#   docker:
+#     name: mydata
+#     image: busybox
+#     state: present

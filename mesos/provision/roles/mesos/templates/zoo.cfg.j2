@@ -4,5 +4,5 @@ clientPort={{ zookeeper_client_port }}
 initLimit=5
 syncLimit=2
 {% for host in groups['mesos_masters'] %}
-server.{{ hostvars[host].zoo_id }}={{ host }}:{{ zookeeper_leader_port }}:{{ zookeeper_election_port }}
+server.{{ hostvars[host].zoo_id }}={{ hostvars[host].static_ip }}:{{ zookeeper_leader_port }}:{{ zookeeper_election_port }}
 {% endfor %}

@@ -9,6 +9,7 @@
 - name: deploy and configure mesos slaves
   hosts: mesos_slaves
   roles:
+    - { role: docker }
     - { role: mesos, mesos_install_mode: "slave", tags: ["mesos_slave"]}
 
 

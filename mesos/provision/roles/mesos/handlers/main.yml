@@ -1,24 +1,67 @@
 ---
-- name: Start mesos-master
-  shell: start mesos-master
+- name: Restart zookeeper
+  #shell: service zookeeper restart
+  #sudo: yes
+  service:
+    name: zookeeper
+    state: restarted
 
-- name: Stop mesos-master
-  shell: stop mesos-master
+# - name: Start mesos-master
+#   #shell: service mesos-master start
+#   #sudo: yes
+#   service:
+#     name: mesos-master
+#     state: started
+#
+# - name: Stop mesos-master
+#   #shell: service mesos-master stop
+#   #sudo: yes
+#   service:
+#     name: mesos-master
+#     state: stopped
 
-- name: Start mesos-slave
-  shell: start mesos-slave
+- name: Restart mesos-master
+  service:
+    name: mesos-master
+    state: restarted
 
-- name: Stop mesos-slave
-  shell: stop mesos-slave
+# - name: Start mesos-slave
+#   #shell: service mesos-slave start
+#   #sudo: yes
+#   service:
+#     name: mesos-slave
+#     state: started
+#
+# - name: Stop mesos-slave
+#   #shell: service mesos-slave stop
+#   #sudo: yes
+#   service:
+#     name: mesos-slave
+#     state: stopped
 
 - name: Start marathon
-  shell: start marathon
+  #shell: service marathon start
+  #sudo: yes
+  service:
+    name: marathon
+    state: started
 
-- name: Stop marathon
-  shell: stop marathon
+# - name: Stop marathon
+#   #shell: service marathon stop
+#   #sudo: yes
+#   service:
+#     name: marathon
+#     state: stopped
 
-- name: Restart zookeeper
-  shell: restart zookeeper
 
-- name: Stop zookeeper
-  shell: stop zookeeper
+# - name: Restart mesos-slave
+#   service:
+#     name: mesos-slave
+#     state: restarted
+
+# - name: Stop zookeeper
+#   #shell: service zookeeper stop
+#   #sudo: yes
+#   service:
+#     name: zookeeper
+#     state: stopped

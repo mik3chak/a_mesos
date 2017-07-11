@@ -14,8 +14,29 @@ Vagrant.configure(2) do |config|
       master.vm.network :forwarded_port, guest: "8080", host: "808#{i}"
 
       master.vm.provider "virtualbox" do |v|
-        v.memory = 2048
-        v.cpus = 2
+        v.memory = 1024
+        v.cpus = 1
+      end
+
+      if i == N
+        master.vm.provision "ansible" do |ansible|
+          ansible.limit = "all"
+          ansible.verbose = "v"
+          ansible.sudo = true
+          ansible.playbook = "provision/playbook.yml"
+          ansible.groups = {
+            "mesos_masters" => ["master1", "master2"],
+            #{}"mesos_masters_ip" => ["10.10.0.11", "10.10.0.12"],
+            "mesos_slaves"  => ["slave1", "slave2"],
+            "all_groups:children" => ["mesos_masters", "mesos_slaves"]
+          }
+          ansible.host_vars = {
+            "master1" => { "zoo_id" => 1, "static_ip" => "10.10.0.11" },
+            "master2" => { "zoo_id" => 2, "static_ip" => "10.10.0.12" },
+            "slave1" => { "static_ip" => "10.10.0.21" },
+            "slave2" => { "static_ip" => "10.10.0.22" }
+          }
+        end
       end
     end
   end
@@ -36,8 +57,28 @@ Vagrant.configure(2) do |config|
       #slave.vm.network "public_network", bridge: "en0: Wi-Fi (AirPort)"
 
       slave.vm.provider "virtualbox" do |v|
-        v.memory = 2048
-        v.cpus = 2
+        v.memory = 1024
+        v.cpus = 1
+      end
+
+      if i == N
+        slave.vm.provision "ansible" do |ansible|
+          ansible.limit = "all"
+          ansible.verbose = "v"
+          ansible.sudo = true
+          ansible.playbook = "provision/playbook.yml"
+          ansible.groups = {
+            "mesos_masters" => ["master1", "master2"],
+            "mesos_slaves"  => ["slave1", "slave2"],
+            "all_groups:children" => ["mesos_masters", "mesos_slaves"]
+          }
+          ansible.host_vars = {
+            "master1" => { "zoo_id" => 1, "static_ip" => "10.10.0.11" },
+            "master2" => { "zoo_id" => 2, "static_ip" => "10.10.0.12" },
+            "slave1" => { "static_ip" => "10.10.0.21" },
+            "slave2" => { "static_ip" => "10.10.0.22" }
+          }
+        end
       end
     end
   end
@@ -52,17 +93,21 @@ Vagrant.configure(2) do |config|
   #   slave02.vm.network "private_network", ip: "192.168.50.5"
   # end
 
-  config.vm.provision "ansible" do |ansible|
-    ansible.verbose = "v"
-    ansible.sudo = true
-    ansible.playbook = "provision/playbook.yml"
-    ansible.groups = {
-      "mesos_masters" => ["master1"],
-      "mesos_slaves"  => ["slave1"],
-      "all_groups:children" => ["mesos_masters", "mesos_slaves"]
-    }
-    ansible.host_vars = {
-      "master1" => {"zoo_id" => 1}
-    }
-  end
+  # config.vm.provision "ansible" do |ansible|
+  #   ansible.verbose = "v"
+  #   ansible.sudo = true
+  #   ansible.playbook = "provision/playbook.yml"
+  #   ansible.groups = {
+  #     "mesos_masters" => ["master1", "master2"],
+  #     #{}"mesos_masters_ip" => ["10.10.0.11", "10.10.0.12"],
+  #     "mesos_slaves"  => ["slave1", "slave2"],
+  #     "all_groups:children" => ["mesos_masters", "mesos_slaves"]
+  #   }
+  #   ansible.host_vars = {
+  #     "master1" => { "zoo_id" => 1, "static_ip" => "10.10.0.11" },
+  #     "master2" => { "zoo_id" => 2, "static_ip" => "10.10.0.12" },
+  #     "slave1" => { "static_ip" => "10.10.0.21" },
+  #     "slave2" => { "static_ip" => "10.10.0.22" }
+  #   }
+  # end
 end
