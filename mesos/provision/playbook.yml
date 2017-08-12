@@ -3,14 +3,15 @@
   hosts: mesos_masters
   #sudo: yes
   roles:
-    - { role: mesos, mesos_install_mode: "master", tags: ["mesos_master"]}
+  #  - { role: java8 }
+    - { role: mesos_master, mesos_install_mode: "master", tags: ["mesos_master"]}
   #  - mesos_master
 
 - name: deploy and configure mesos slaves
   hosts: mesos_slaves
   roles:
-    - { role: docker }
-    - { role: mesos, mesos_install_mode: "slave", tags: ["mesos_slave"]}
+    #- { role: docker }
+    - { role: mesos_slave, mesos_install_mode: "slave", tags: ["mesos_slave"]}
 
 
   # tasks:

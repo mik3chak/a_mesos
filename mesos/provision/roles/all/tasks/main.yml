@@ -25,3 +25,11 @@
     name=ntp
     enabled=yes
     state=started
+
+- name: Install gdebi
+  apt:
+    pkg="{{item}}"
+    state=present
+    update_cache=yes
+  with_items:
+    - gdebi

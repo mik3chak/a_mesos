@@ -1,0 +1,19 @@
+---
+- name: Restart zookeeper
+  #shell: service zookeeper restart
+  #sudo: yes
+  service:
+    name: zookeeper
+    state: restarted
+
+- name: Restart mesos-master
+  service:
+    name: mesos-master
+    state: restarted
+
+- name: Start marathon
+  #shell: service marathon start
+  #sudo: yes
+  service:
+    name: marathon
+    state: started

@@ -1,0 +1,1 @@
+{"virtualbox":{"/sf":{"guestpath":"/sf","hostpath":"/Volumes/DATA/deb","disabled":false,"__vagrantfile":true},"/vagrant":{"guestpath":"/vagrant","hostpath":"/Users/kr/Workspace/MyVagrant/mesos","disabled":false,"__vagrantfile":true}}}

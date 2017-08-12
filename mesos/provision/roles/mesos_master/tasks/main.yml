@@ -1,6 +1,138 @@
 ---
+# - name: Install ZK
+#   apt:
+#     pkg="{{item}}"
+#     state=present
+#     update_cache=yes
+#   with_items:
+#     - zookeeper
+#     - zookeeperd
+
+- name: Install ZK package
+  command: gdebi /sf/zookeeper_3.4.5+dfsg-1_all.deb --n --quiet
+  failed_when: false
+
+- name: Install ZKd package
+  command: gdebi /sf/zookeeperd_3.4.5+dfsg-1_all.deb --n --quiet
+  failed_when: false
+
+- name: Install Mesos package
+  command: gdebi /sf/mesos_1.3.0-2.0.3_amd64.deb --n --quiet
+  failed_when: false
+
+- name: Install Marathon package
+  command: gdebi /sf/marathon_1.4.5-1.0.654.ubuntu1404_amd64.deb --n --quiet
+  failed_when: false
+
+- name: Install Chronos package
+  command: gdebi /sf/chronos_2.5.0-0.1.20170628182950.ubuntu1404_amd64.deb --n --quiet
+  failed_when: false
+
 - name: Install Mesosphere package
-  apt:
-    pkg="mesosphere"
-    state=present
-    update_cache=yes
+  command: gdebi /sf/mesosphere_0.1.1~ubuntu14.04-1_all.deb --n --quiet
+  failed_when: false
+
+- name: Stop mesos slave in masters
+  service:
+    name: mesos-slave
+    state: stopped
+  failed_when: false
+
+- name: Disable Mesos slave service in masters
+  copy:
+    content: "manual"
+    dest: /etc/init/mesos-slave.override
+    mode: 0644
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos Master quorum
+  copy:
+    content: "{{mesos_quorum_count}}"
+    dest: /etc/mesos-master/quorum
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos cluster name
+  copy:
+    content: "{{mesos_cluster_name}}"
+    dest: /etc/mesos-master/cluster
+  when: mesos_install_mode == "master"
+
+- name: Get hostname
+  command: hostname
+  register: hostname
+
+- debug: msg=hostname.stdout
+
+- name: Set Mesos master ip
+  copy:
+    #content: "{{mesos_local_address}}"
+    content: "{{hostvars[hostname.stdout].static_ip}}"
+    dest: /etc/mesos-master/ip
+  when: mesos_install_mode == "master"
+
+- name: Set Mesos master hostname
+  copy:
+    #content: "{{mesos_local_address}}"
+    content: "{{hostvars[hostname.stdout].static_ip}}"
+    dest: /etc/mesos-master/hostname
+  when: mesos_install_mode == "master"
+
+- name: Setup Zookeeper
+  copy:
+    content: "{{zookeeper_mesos_url2}}"
+    dest: /etc/mesos/zk
+    mode: 0644
+  # template:
+  #   src=mesos_zk.j2
+  #   dest=/etc/mesos/zk
+  when: mesos_install_mode == "master" or mesos_install_mode == "slave"
+
+- name: Setup Zookeeper id
+  template:
+    src=zoo_id.j2
+    dest=/etc/zookeeper/conf/myid
+  when: mesos_install_mode == "master"
+
+- name: Setup Zookeeper conf
+  template:
+    src=zoo.cfg.j2
+    dest=/etc/zookeeper/conf/zoo.cfg
+  notify:
+    - Restart zookeeper
+    - Restart mesos-master
+    - Start marathon
+  when: mesos_install_mode == "master"
+
+- name: Create Marathon directory
+  file:
+    path: /etc/marathon/conf
+    state: directory
+    owner: vagrant
+    group: vagrant
+    mode: 0775
+  when: mesos_install_mode == "master"
+
+- name: Set Marathon hostname
+  copy:
+    remote_src: true
+    src: /etc/mesos-master/hostname
+    dest: /etc/marathon/conf
+  when: mesos_install_mode == "master"
+
+- name: Set Marathon zk
+  copy:
+    remote_src: true
+    src: /etc/mesos/zk
+    dest: /etc/marathon/conf/master
+  when: mesos_install_mode == "master"
+
+- name: Set Marathon zk conf
+  copy:
+    remote_src: true
+    src: /etc/marathon/conf/master
+    dest: /etc/marathon/conf/zk
+  when: mesos_install_mode == "master"
+
+- name: Set Marathon zk conf to marathon
+  shell: sed -i 's/mesos/marathon/g' /etc/marathon/conf/zk
+  when: mesos_install_mode == "master"

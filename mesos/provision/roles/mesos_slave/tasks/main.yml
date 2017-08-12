@@ -1,12 +1,80 @@
 ---
 - name: Install Mesos package
-  apt:
-    pkg="mesos"
-    state=present
-    update_cache=yes
+  command: gdebi /sf/mesos_1.3.0-2.0.3_amd64.deb --n --quiet
+  failed_when: false
 
-- name: Disable zookeeper service
+- name: Stop mesos master and zk in slaves
   service:
-    name=zookeeper
-    enabled=no
-    state=stopped
+    name: "{{item}}"
+    state: stopped
+  with_items:
+    - mesos-master
+    - zookeeper
+  failed_when: false
+
+- name: Disable Mesos master service in slaves
+  copy:
+    content: "manual"
+    dest: /etc/init/mesos-master.override
+    mode: 0644
+  when: mesos_install_mode == "slave"
+
+- name: Disable Zk in slave (if any)
+  copy:
+    content: "manual"
+    dest: /etc/init/zookeeper.override
+    mode: 0644
+  when: mesos_install_mode == "slave"
+  failed_when: false
+
+- name: Get hostname
+  command: hostname
+  register: hostname
+
+- debug: msg=hostname.stdout
+
+- name: Set Mesos slave ip
+  copy:
+    #content: "{{mesos_local_address}}"
+    content: "{{hostvars[hostname.stdout].static_ip}}"
+    dest: /etc/mesos-slave/ip
+  when: mesos_install_mode == "slave"
+
+- name: Set Mesos slave hostname
+  copy:
+    #content: "{{mesos_local_address}}"
+    content: "{{hostvars[hostname.stdout].static_ip}}"
+    dest: /etc/mesos-slave/hostname
+  when: mesos_install_mode == "slave"
+
+- name: Setup Zookeeper
+  copy:
+    content: "{{zookeeper_mesos_url2}}"
+    dest: /etc/mesos/zk
+    mode: 0644
+  # template:
+  #   src=mesos_zk.j2
+  #   dest=/etc/mesos/zk
+  when: mesos_install_mode == "master" or mesos_install_mode == "slave"
+
+# - name: Restart mesos-slave
+#   service:
+#     name: mesos-slave
+#     state: restarted
+#   when: mesos_install_mode == "slave"
+
+# - name: Install Mesos package
+#   apt:
+#     pkg="mesos"
+#     state=present
+#     update_cache=yes
+#
+# - name: Disable zookeeper service
+#   service:
+#     name=zookeeper
+#     enabled=no
+#     state=stopped
+
+# - name: Set containerizers
+#   environment:
+#     MESOS_containerizers: mesos,docker

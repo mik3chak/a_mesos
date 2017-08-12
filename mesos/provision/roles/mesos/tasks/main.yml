@@ -55,7 +55,7 @@
     update_cache=yes
   with_items:
     - mesosphere
-  when: mesos_install_mode == "master"
+  when: mesos_install_mode == "NA"
 
 - name: Install Mesos package
   apt:
@@ -64,12 +64,53 @@
     update_cache=yes
   with_items:
     - mesos
-  when: mesos_install_mode == "slave"
+  when: mesos_install_mode == "NA"
+
+- name: Install Chronos package
+  command: dpkg -i /sf/chronos_2.5.0-0.1.20170628182950.ubuntu1404_amd64.deb
+  when: mesos_install_mode == "master" or mesos_install_mode == "slave"
+  failed_when: false
+
+- name: Install Chronos package part2
+  command: apt-get install -f -y
+  when: mesos_install_mode == "master" or mesos_install_mode == "slave"
+  failed_when: false
+
+- name: Install Mesos package
+  command: dpkg -i /sf/mesos_1.3.0-2.0.3_amd64.deb
+  when: mesos_install_mode == "master" or mesos_install_mode == "slave"
+  failed_when: false
+
+- name: Install Mesos package part2
+  command: apt-get install -f -y
+  when: mesos_install_mode == "master" or mesos_install_mode == "slave"
+  failed_when: false
+
+- name: Install Marathon package
+  command: dpkg -i /sf/marathon_1.4.5-1.0.654.ubuntu1404_amd64.deb
+  when: mesos_install_mode == "master"
+  failed_when: false
+
+- name: Install Marathon package part 2
+  command: apt-get install -f -y
+  when: mesos_install_mode == "master"
+  failed_when: false
+
+- name: Install ZK package
+  command: dpkg -i /sf/mesosphere_0.1.1~ubuntu14.04-1_all.deb
+  when: mesos_install_mode == "master"
+  failed_when: false
+
+- name: Install ZK package part 2
+  command: apt-get install -f -y
+  when: mesos_install_mode == "master"
+  failed_when: false
 
 - name: Stop mesos slave in masters
   service:
     name: mesos-slave
     state: stopped
+  when: mesos_install_mode == "master"
 
 - name: Stop mesos master and zk in slaves
   service:
@@ -78,6 +119,7 @@
   with_items:
     - mesos-master
     - zookeeper
+  when: mesos_install_mode == "slave"
 
 - name: Disable Mesos slave service in masters
   copy:
@@ -153,6 +195,7 @@
     owner: vagrant
     group: vagrant
     mode: 0775
+  when: mesos_install_mode == "master"
 
 - name: Set Marathon hostname
   copy:
@@ -209,6 +252,7 @@
   service:
     name: mesos-slave
     state: restarted
+  when: mesos_install_mode == "slave"
 
 # - name: Restart mesos slaves
 #   notify:
